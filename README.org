@@ -1,0 +1,219 @@
+#+startup: inlineimages
+#+startup: latexpreview
+#+options: ':t toc:nil ^:nil num:nil
+#+title: Hector - A Hex Grid Vector Library
+
+Hector is a configurable vector library for working with hexagonal grids
+written in Lua.
+
+** Example Usage:
+
+#+begin_src lua
+  hector = require 'hector'
+
+  -- Initialize the library
+  -- hector.init()   -- uses all default values
+  hector.init{x_axis = P_AXIS, y_axis = -Q_AXIS, major = 64}
+
+  -- Create and manipulate vectors
+  u = vector(1, 2)
+  v = vector(3, 4)
+  w = u + v
+  w = w:rotate(1, vector(1, 1))
+#+end_src
+
+
+** Initialization
+The ~hector.init~ method takes a single keyed table as input. Any key not
+provided will be initialized to a default value as in the table below:
+
+| keyword      | meaning                         | allowed values | default             |
+|--------------+---------------------------------+----------------+---------------------|
+| style        | top of hex is flat              | FLAT           | FLAT                |
+|              | or pointed.                     | POINTY         |                     |
+|--------------+---------------------------------+----------------+---------------------|
+| x_axis       | direction to be considered the  | [-]P_AXIS      | P_AXIS              |
+|              | hex grid's 'x' direction.       | [-]Q_AXIS      |                     |
+|              |                                 | [-]R_AXIS      |                     |
+|--------------+---------------------------------+----------------+---------------------|
+| y_axis       | direction to be considered the  | [-]P_AXIS      | -R_AXIS             |
+|              | hex grid's 'y' direction.       | [-]Q_AXIS      |                     |
+|              |                                 | [-]R_AXIS      |                     |
+|--------------+---------------------------------+----------------+---------------------|
+| major        | length of hex major axis        | number         | 32                  |
+|              | (corner to opposite corner)     | (pixels)       |                     |
+|--------------+---------------------------------+----------------+---------------------|
+| minor        | length of hex minor axis        | number         | calculated based on |
+|              | (side to opposite side)         | (pixels)       | value of major      |
+|--------------+---------------------------------+----------------+---------------------|
+| point_height | height of point along the major | number         | calculated based on |
+|              | axis                            | (pixels)       | value of major      |
+|--------------+---------------------------------+----------------+---------------------|
+
+The chosen style ~FLAT~ or ~POINTY~ affect how the constants ~P_AXIS~,
+~Q_AXIS~ and ~R_AXIS~ are interpreted as in the diagram below. The
+axis constants can be negated (~-P_AXIS~ etc.) so any of the six
+directions can be used for either axis. Each hex in the grid will then
+have a unique representation in terms of the chosen ~x_axis~ and ~y_axis~.
+
+#+caption: *Axis interpretation for ~FLAT~ (left) and ~POINTY~ (right) hexagons*
+[[file:images/hex-axes.png]]
+
+#+caption: *Different coordinates for POINTY hex grids resulting from ~{x_axis=P_AXIS, y_axis=Q_AXIS}~ on the left and ~{x_axis=P_AXIS, y_axis=-Q_AXIS}~ on the right.*
+[[file:images/coordinates2.png]]
+
+
+The ~major~, ~minor~ and ~point_height~ options allow you to specify
+the dimensions of the hexagons. If only ~major~ is specified the other
+values will be initialized such that the grid consists of /regular/
+hexagons.
+
+[[file:images/hex-dimensions.png]]
+
+Importantly, ~major~, ~minor~ and ~point_height~ only affect the
+on-screen proportions and location of the hexagons. ~hector~ treats
+/all/ hex grids as /regular/ hex grids until converted to screen
+coordinates. That means rotations are always in multiples of 60
+degrees even though the angle on screen may more or less than 60
+degrees. Similarly the ~hex_cross~ and ~hex_dot~ methods (see below)
+always return values based on multiples of 60 degrees.
+
+** Vectors
+The ~vector~ function takes either 2 or 3 arguments: $x$, $y$ and
+optionally $z$.
+
+#+begin_src lua
+  u = vector(1, 2)
+  v = vector(1, 2, 3)
+#+end_src
+
+Typically you'll only use 2 arguments ($x$ and $y$) to represent
+either a hex in the grid or a screen position with $z$ defaulting to
+zero. Vectors are 3D because internally most operations on hex vectors
+are accomplished by converting the 2D hex coordinate to a 3D cube
+coordinate, operating on the cube, and then converting back.  See [[https://www.redblobgames.com/grids/hexagons/][this
+guide on hexagonal grids]] for more information.
+
+
+*** Vector Operations
+Vectors support the usual (and one not so usual) vector operations via
+Lua metamethods:
+- ~u == v~ :: comparing two vectors for equality
+- ~-v~ :: negation/reversing the direction of a vector
+- ~u + v, u - v~ :: vector addition and subtraction
+- ~s * v~ :: scalar multiplication of a vector. The scalar must be the
+  /first/ operand.¹
+- ~v / s~ :: scalar division of a vector. The scalar must be the
+  /second/ operand.
+- ~u..v~ :: dot product. This is the usual dot product defined for
+  euclidean 3D vectors and should /not/ be used directly with vectors
+  representing hex coordinates or directions on the hex grid. Use the
+  ~vector:hex_dot()~ method instead.
+- ~u^v~ :: a "cross-like" product. This is /not/ a 3D cross
+  product---though it is related to it---but returns a scalar value
+  similar to the dot product. For hex coordinates use the
+  ~vector:hex_cross()~ method.
+
+#+html: <hr>
+¹[Implementation Note:] The multiplication operator is actually more
+complicated than this. I didn't want to rely on an external
+vector/matrix library. The vectors in ~hector~ are implemented as
+/multivectors/ because it makes for a fairly compact implementation
+which can do much of what can be accomplished with matrices. Which
+basically just means that it's possible to multiply two vectors ~u~
+and ~v~ together. You almost certainly don't want to do this unless
+you know what you're doing but vector $\times$ vector multiplication
+like this is how ~hector~ handles rotations (including converting
+to/from screen coordinates) and reflections.
+#+html: <hr>
+
+Other methods available on vectors:
+
+- ~v:abs(), v:floor()~ :: These functions both perform the
+  associated mathematical function to each component of the vector.
+
+  #+begin_src lua
+    vector(-1, 2):abs()      -- returns vector(1, 2)
+    vector(1.1, 2.3):floor() -- returns vector(1, 2)
+  #+end_src
+
+- ~v:hex_cross(u, v)~ :: The hex specific version of the ~^~ (~__pow~)
+  operator. It operates on 'standard' cube coordinates and therefore
+  always behaves as if operating on /regular/ hexagons. It returns the
+  scalar value $sin(\theta)$ where $\theta$, the angle between ~u~ and
+  ~v~, will always be a multiple of 60 degrees.
+
+  #+html:<hr>
+  [Implementation Note:]
+
+  The standard coordinate representations of
+  ~u~ and ~v~ are normalized before performing the product which is
+  why it return $sin(\theta)$ and not $|u| |v| sin(\theta)$
+  #+html:<hr>
+
+- ~v:hex_dot(u, v)~ :: The hex specific version of the ~..~
+  (~__concat~) operator. It operates on 'standard' cube coordinates
+  and therefore always behaves as if operating on /regular/
+  hexagons. It returns the scalar value $cos(\theta)$ where $\theta$,
+  the angle between ~u~ and ~v~, will always be a multiple of 60
+  degrees.
+
+  As with ~hex_cross~, ~u~ and ~v~ are normalized internally. See
+  the implementation note above.
+
+- ~v:hex_len()~ :: The length of the vector in terms of number of
+  hexes travelled through. To calculate the distance between two
+  arbitrary hexes ~u~ and ~v~:
+
+  #+begin_src lua
+    dist = (v - u):hex_len()
+  #+end_src
+
+- ~v:magnitude()~ :: Calculates the magnitude of /euclidean/ vector
+  ~v~. If you want the length in terms of number of hexes use
+  ~v:hex_len()~ instead.
+
+- ~v:magnitude2()~ :: The squared magnitude of /euclidean/ vector ~v~.
+
+
+- ~v:neighbours()~ :: Returns an array of the hex's 6
+  neighbouring hexes. (American spelling ~vector:neighbors~ also
+  works.)
+
+- ~v:reflect(w)~ :: Reflects the hex across a given axis. The vector
+  ~w~ should be one of the axis constants ~P_AXIS~, ~Q_AXIS~, or
+  ~R_AXIS~.
+
+- ~v:rotate(n, center)~ :: Rotates a hex vector around ~center~ by ~n~
+  "places." Both ~n~ and ~center~ are optional.
+  
+  ~n~ defaults to 1. Positive ~n~ rotates counter-clockwise, negative
+  ~n~ rotates clockwise. Technically ~n~ can be any interger value but
+  rotating by $n = \pm 3$ is equivalent to simply negating the vector:
+  ~v:rotate(3) == v:rotate(-3) == -v~.
+
+  ~center~ defaults to the origin: ~vector(0, 0)~
+
+- ~v:round()~ :: Implements the algorithm needed to convert
+  screen coordinates to hex coordinates. You probably won't ever need
+  to use this yourself.
+
+- ~v:screen_len()~ :: Calculate the length of the vector in
+  pixels. The vector ~v~ is assumed to either represent a hex
+  coordinate or a direction on the hex grid. If ~v~ already represents
+  screen coordinates use ~v:magnitude()~ to find its length instead.
+
+- ~v:show()~ :: The ~__tostring~ method displays the vector as a hex
+  or screen coordinate vector with integer ~x~ and ~y~
+  components. This method will return a string representation of the
+  full underlying multivector. Possibly useful for debugging. 
+  
+- ~v:taxi_len()~ :: The "taxi-cab" metric on 3D vectors: ~abs(x) +
+  abs(y) + abs(z)~. Used to calculate ~hex_len~. You probably won't
+  need to use this directly.
+
+- ~v:to_hex()~ :: Converts ~v~, a coordinate in screen space, to a
+  corresponding coordinate on the hex grid.
+
+- ~v:to_screen()~ :: Converts ~v~, a coordinate on the hex grid, to the
+  screen position of the center of the hex.
