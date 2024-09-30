@@ -56,11 +56,20 @@ axis constants can be negated (~-P_AXIS~ etc.) so any of the six
 directions can be used for either axis. Each hex in the grid will then
 have a unique representation in terms of the chosen ~x_axis~ and ~y_axis~.
 
-#+caption: *Axis interpretation for ~FLAT~ (left) and ~POINTY~ (right) hexagons*
-[[file:images/hex-axes.png]]
+#+begin_html
+<div id="orgd61165a" class="figure" align="center">
+<p><img src="images/hex-axes.png" alt="hex-axes.png" />
+</p>
+<p><span class="figure-number">Figure 1: </span>Axis interpretation for <code>FLAT</code> (left) and <code>POINTY</code> (right) hexagons</p>
+</div>
 
-#+caption: *Different coordinates for POINTY hex grids resulting from ~{x_axis=P_AXIS, y_axis=Q_AXIS}~ on the left and ~{x_axis=P_AXIS, y_axis=-Q_AXIS}~ on the right.*
-[[file:images/coordinates2.png]]
+
+<div id="org1c88398" class="figure" align="center">
+<p><img src="images/coordinates2.png" alt="coordinates2.png" />
+</p>
+<p><span class="figure-number">Figure 2: </span>Different coordinates for POINTY hex grids resulting from <code>{x_axis=P_AXIS, y_axis=Q_AXIS}</code> on the left and <code>{x_axis=P_AXIS, y_axis=-Q_AXIS}</code> on the right.</p>
+</div>
+#+end_html
 
 
 The ~major~, ~minor~ and ~point_height~ options allow you to specify
@@ -68,7 +77,13 @@ the dimensions of the hexagons. If only ~major~ is specified the other
 values will be initialized such that the grid consists of /regular/
 hexagons.
 
-[[file:images/hex-dimensions.png]]
+#+begin_html
+<div id="org0837671" class="figure" align="center">
+<p><img src="images/hex-dimensions.png" alt="hex-dimensions.png" />
+</p>
+<p><span class="figure-number">Figure 3: </span>Hexagon proportions</p>
+</div>
+#+end_html
 
 Importantly, ~major~, ~minor~ and ~point_height~ only affect the
 on-screen proportions and location of the hexagons. ~hector~ treats
@@ -96,13 +111,13 @@ guide on hexagonal grids]] for more information.
 
 
 *** Vector Operations
-Vectors support the usual (and one not so usual) vector operations via
+Vectors support the usual vector operations via
 Lua metamethods:
 - ~u == v~ :: comparing two vectors for equality
 - ~-v~ :: negation/reversing the direction of a vector
 - ~u + v, u - v~ :: vector addition and subtraction
 - ~s * v~ :: scalar multiplication of a vector. The scalar must be the
-  /first/ operand.¹
+  /first/ operand.
 - ~v / s~ :: scalar division of a vector. The scalar must be the
   /second/ operand.
 - ~u..v~ :: dot product. This is the usual dot product defined for
@@ -115,7 +130,7 @@ Lua metamethods:
   ~vector:hex_cross()~ method.
 
 #+html: <hr>
-¹[Implementation Note:] The multiplication operator is actually more
+[Implementation Note:] The multiplication operator is actually more
 complicated than this. I didn't want to rely on an external
 vector/matrix library. The vectors in ~hector~ are implemented as
 /multivectors/ because it makes for a fairly compact implementation
@@ -140,21 +155,20 @@ Other methods available on vectors:
 - ~v:hex_cross(u, v)~ :: The hex specific version of the ~^~ (~__pow~)
   operator. It operates on 'standard' cube coordinates and therefore
   always behaves as if operating on /regular/ hexagons. It returns the
-  scalar value $sin(\theta)$ where $\theta$, the angle between ~u~ and
+  scalar value sin(\theta) where \theta, the angle between ~u~ and
   ~v~, will always be a multiple of 60 degrees.
 
   #+html:<hr>
-  [Implementation Note:]
-
-  The standard coordinate representations of
-  ~u~ and ~v~ are normalized before performing the product which is
-  why it return $sin(\theta)$ and not $|u| |v| sin(\theta)$
+  [Implementation Note:] In ~hex_cross~ and ~hex_dot~ the hex coordinates ~u~ 
+  and ~v~ are converted to a standard coordinates and normalized before 
+  performing the product which is why they return $sin(\theta)$  and $cos(\theta)$ instead of 
+  $|u||v|sin(\theta)$ and $|u||v|cos(\theta)$ respectively.
   #+html:<hr>
 
 - ~v:hex_dot(u, v)~ :: The hex specific version of the ~..~
   (~__concat~) operator. It operates on 'standard' cube coordinates
   and therefore always behaves as if operating on /regular/
-  hexagons. It returns the scalar value $cos(\theta)$ where $\theta$,
+  hexagons. It returns the scalar value cos(\theta) where \theta,
   the angle between ~u~ and ~v~, will always be a multiple of 60
   degrees.
 
@@ -208,9 +222,9 @@ Other methods available on vectors:
   components. This method will return a string representation of the
   full underlying multivector. Possibly useful for debugging. 
   
-- ~v:taxi_len()~ :: The "taxi-cab" metric on 3D vectors: ~abs(x) +
-  abs(y) + abs(z)~. Used to calculate ~hex_len~. You probably won't
-  need to use this directly.
+- ~v:taxi_len()~ :: The "taxi-cab" metric on 3D vectors:
+  ~abs(x) + abs(y) + abs(z)~. Used to calculate ~hex_len~. You
+  probably won't need to use this directly.
 
 - ~v:to_hex()~ :: Converts ~v~, a coordinate in screen space, to a
   corresponding coordinate on the hex grid.
